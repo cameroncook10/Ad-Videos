@@ -39,4 +39,24 @@
     <question>What is the name and version of the MCP server as declared in the server configuration?</question>
     <answer>ad-videos 1.0.0</answer>
   </qa_pair>
+  <qa_pair>
+    <question>Using the prompt_categories tool, how many total prompts are in the Nano Banana Pro library?</question>
+    <answer>10901</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>How many prompt categories are available in the Nano Banana Pro library? Count all categories listed in the manifest.</question>
+    <answer>11</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which prompt category has the most prompts in the Nano Banana Pro library? Give the category title.</question>
+    <answer>Social Media Post</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the slug for the YouTube Thumbnail category in the Nano Banana Pro prompt library?</question>
+    <answer>youtube-thumbnail</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which tool should you use to get the full text of a specific prompt by its numeric ID from the Nano Banana Pro library?</question>
+    <answer>prompt_get</answer>
+  </qa_pair>
 </evaluation>

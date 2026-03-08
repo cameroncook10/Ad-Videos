@@ -521,6 +521,214 @@ server.tool(
   }
 );
 
+// ── Nano Banana Prompt Library ─────────────────────────────────────────────────
+
+/** Resolve the prompts directory relative to this file. */
+function getPromptsDir(): string {
+  const thisDir = new URL(".", import.meta.url).pathname;
+  return path.resolve(thisDir, "..", "prompts");
+}
+
+interface PromptEntry {
+  id: number;
+  content: string;
+  title: string;
+  description: string;
+  sourceMedia: string[];
+  needReferenceImages: boolean;
+}
+
+interface ManifestCategory {
+  slug: string;
+  title: string;
+  file: string;
+  count: number;
+}
+
+interface Manifest {
+  updatedAt: string;
+  totalPrompts: number;
+  categories: ManifestCategory[];
+}
+
+// ── Tool: prompt_categories ───────────────────────────────────────────────────
+server.tool(
+  "prompt_categories",
+  "List all available image prompt categories from the Nano Banana Pro library (10,000+ prompts). Returns category names, slugs, and prompt counts. Use this first to find the right category for your needs.",
+  {},
+  async () => {
+    const manifestPath = path.join(getPromptsDir(), "manifest.json");
+    const raw = await fs.readFile(manifestPath, "utf-8");
+    const manifest: Manifest = JSON.parse(raw);
+
+    const lines = manifest.categories.map(
+      (c) => `- **${c.title}** (${c.slug}) — ${c.count} prompts`
+    );
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Nano Banana Pro Prompt Library — ${manifest.totalPrompts} total prompts\nLast updated: ${manifest.updatedAt}\n\n**Categories:**\n${lines.join("\n")}`,
+        },
+      ],
+    };
+  }
+);
+
+// ── Tool: prompt_search ───────────────────────────────────────────────────────
+server.tool(
+  "prompt_search",
+  "Search the Nano Banana Pro prompt library for image generation prompts matching a keyword. Searches across prompt titles, descriptions, and content. Returns up to 5 matching prompts with sample image URLs. Great for finding prompts for video thumbnails, ad creatives, social media visuals, and more.",
+  {
+    query: z
+      .string()
+      .describe("Search keyword(s) to find matching prompts (case-insensitive)"),
+    category: z
+      .string()
+      .optional()
+      .describe(
+        'Category slug to search in (e.g. "youtube-thumbnail", "product-marketing"). Omit to search all categories.'
+      ),
+    limit: z
+      .number()
+      .optional()
+      .default(5)
+      .describe("Maximum number of results to return (default 5, max 10)"),
+  },
+  async ({ query, category, limit }) => {
+    const promptsDir = getPromptsDir();
+    const manifestPath = path.join(promptsDir, "manifest.json");
+    const raw = await fs.readFile(manifestPath, "utf-8");
+    const manifest: Manifest = JSON.parse(raw);
+
+    const maxResults = Math.min(limit, 10);
+    const queryLower = query.toLowerCase();
+    const matches: PromptEntry[] = [];
+
+    const categoriesToSearch = category
+      ? manifest.categories.filter((c) => c.slug === category)
+      : manifest.categories;
+
+    if (category && categoriesToSearch.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Category "${category}" not found. Use prompt_categories to see available categories.`,
+          },
+        ],
+      };
+    }
+
+    for (const cat of categoriesToSearch) {
+      if (matches.length >= maxResults) break;
+
+      const filePath = path.join(promptsDir, cat.file);
+      try {
+        const data = await fs.readFile(filePath, "utf-8");
+        const prompts: PromptEntry[] = JSON.parse(data);
+
+        for (const p of prompts) {
+          if (matches.length >= maxResults) break;
+          const searchText =
+            `${p.title} ${p.description} ${p.content}`.toLowerCase();
+          if (searchText.includes(queryLower)) {
+            matches.push(p);
+          }
+        }
+      } catch {
+        // Skip unreadable category files
+      }
+    }
+
+    if (matches.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `No prompts matching "${query}" found${category ? ` in category "${category}"` : ""}. Try different keywords or browse categories with prompt_categories.`,
+          },
+        ],
+      };
+    }
+
+    const results = matches.map((p, i) => {
+      const truncated =
+        p.content.length > 100 ? p.content.slice(0, 100) + "..." : p.content;
+      const image =
+        p.sourceMedia.length > 0
+          ? `\n**Sample:** ${p.sourceMedia[0]}`
+          : "";
+      const refImg = p.needReferenceImages
+        ? "\n**Requires reference image:** Yes"
+        : "";
+      return `### ${i + 1}. ${p.title}\n**Description:** ${p.description}\n**Prompt preview:**\n> ${truncated}\n[View full prompt](https://youmind.com/nano-banana-pro-prompts?id=${p.id})${image}${refImg}`;
+    });
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Found ${matches.length} prompt(s) matching "${query}":\n\n${results.join("\n\n---\n\n")}\n\n---\nPrompts curated from the open community by [YouMind.com](https://youmind.com)`,
+        },
+      ],
+    };
+  }
+);
+
+// ── Tool: prompt_get ──────────────────────────────────────────────────────────
+server.tool(
+  "prompt_get",
+  "Get a specific prompt by ID from the Nano Banana Pro library. Returns the full prompt text, sample image URL, and metadata. Use after prompt_search to get the complete prompt for image generation.",
+  {
+    id: z.number().describe("The prompt ID to retrieve"),
+  },
+  async ({ id }) => {
+    const promptsDir = getPromptsDir();
+    const manifestPath = path.join(promptsDir, "manifest.json");
+    const raw = await fs.readFile(manifestPath, "utf-8");
+    const manifest: Manifest = JSON.parse(raw);
+
+    for (const cat of manifest.categories) {
+      const filePath = path.join(promptsDir, cat.file);
+      try {
+        const data = await fs.readFile(filePath, "utf-8");
+        const prompts: PromptEntry[] = JSON.parse(data);
+        const found = prompts.find((p) => p.id === id);
+        if (found) {
+          const image =
+            found.sourceMedia.length > 0
+              ? `\n\n**Sample image:** ${found.sourceMedia[0]}`
+              : "";
+          const refImg = found.needReferenceImages
+            ? "\n**Requires reference image:** Yes"
+            : "";
+          return {
+            content: [
+              {
+                type: "text",
+                text: `### ${found.title}\n\n**Category:** ${cat.title}\n**Description:** ${found.description}\n\n**Full prompt:**\n\`\`\`\n${found.content}\n\`\`\`${image}${refImg}\n\n[View on YouMind](https://youmind.com/nano-banana-pro-prompts?id=${found.id})\n\n---\nPrompts curated from the open community by [YouMind.com](https://youmind.com)`,
+              },
+            ],
+          };
+        }
+      } catch {
+        // Skip unreadable files
+      }
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Prompt with ID ${id} not found. Use prompt_search to find prompts.`,
+        },
+      ],
+    };
+  }
+);
+
 // ── Start server ──────────────────────────────────────────────────────────────
 async function main() {
   const transport = new StdioServerTransport();
