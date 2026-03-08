@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>Using the ad-videos MCP server, check the system capabilities. Is ffprobe available on this system? Answer "yes" or "no".</question>
+    <answer>yes</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>List all video files in the /tmp/test-videos directory. How many MP4 files are found if the directory contains: intro.mp4, outro.mp4, clip.mov, and notes.txt?</question>
+    <answer>2</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Get the video info for a 1920x1080 MP4 file encoded with H.264. What is the resolution reported by the video_info tool?</question>
+    <answer>1920x1080</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Search for video files containing the word "intro" in /tmp/test-videos which has intro_v1.mp4, intro_v2.mov, and outro.mp4. How many results are returned?</question>
+    <answer>2</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the default timestamp used for thumbnail extraction when no timestamp parameter is provided to the video_thumbnail tool?</question>
+    <answer>00:00:01</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>When trimming a video with the video_trim tool and reencode set to false (the default), what ffmpeg copy mode argument is used to avoid re-encoding?</question>
+    <answer>-c copy</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>How many distinct video file extensions does the ad-videos MCP server recognize as video files? Count all extensions listed in the supported set.</question>
+    <answer>13</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which tool should be used to combine three separate video clips into a single video file?</question>
+    <answer>video_concat</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>When using video_resize with only a width of 1280 and no height specified, what value is used for the height in the ffmpeg scale filter?</question>
+    <answer>-1</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the name and version of the MCP server as declared in the server configuration?</question>
+    <answer>ad-videos 1.0.0</answer>
+  </qa_pair>
+</evaluation>
