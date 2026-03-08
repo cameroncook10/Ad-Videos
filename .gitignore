@@ -3,3 +3,4 @@ dist/
 *.tgz
 .env
 output/scenes/
+output/preview_*
